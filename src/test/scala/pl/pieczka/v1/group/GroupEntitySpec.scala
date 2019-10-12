@@ -37,28 +37,15 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
 
     val groupEntity = ClusterSharding(system).shardRegion(GroupEntity.entityType)
 
-    "result with not found if group not yet created" in {
-      //given
-      val groupId = 10
-
-      //then
-      groupEntity ! GroupEntity.GetGroup(groupId)
-
-      //verify
-      expectMsg(Left(GroupEntity.GroupNotFound(groupId)))
-    }
-
     "create new group" in {
       //given
       val groupId = 10
 
       //then
-      groupEntity ! GroupEntity.CreateGroup(groupId)
       groupEntity ! GroupEntity.GetGroup(groupId)
 
       //verify
-      expectMsg(Right(GroupState(groupId)))
-      expectMsg(Right(GroupState(groupId)))
+      expectMsg(Right(GroupState()))
     }
 
     "accept new users" in {
@@ -70,7 +57,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       groupEntity ! GroupEntity.AddUser(groupId, userId)
 
       //verify
-      expectMsg(Right(GroupState(groupId, members = Set(userId))))
+      expectMsg(Right(GroupState(members = Set(userId))))
     }
 
     "allow users to leave" in {
@@ -84,8 +71,8 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       groupEntity ! GroupEntity.RemoveUser(groupId, newUserId)
 
       //verify
-      expectMsg(Right(GroupState(groupId, members = Set(userId, newUserId))))
-      expectMsg(Right(GroupState(groupId, members = Set(userId))))
+      expectMsg(Right(GroupState(members = Set(userId, newUserId))))
+      expectMsg(Right(GroupState(members = Set(userId))))
     }
 
     "should not accept messages from strangers" in {
@@ -101,7 +88,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
 
       //verify
       expectMsg(Left(GroupEntity.NotMember(groupId, strangerId)))
-      expectMsg(Right(GroupState(groupId, members = Set(userId))))
+      expectMsg(Right(GroupState(members = Set(userId))))
     }
 
     "should accept messages from members" in {
@@ -114,7 +101,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       groupEntity ! GroupEntity.AddMessage(groupId, userId, message)
 
       //verify
-      expectMsg(Right(GroupState(groupId, members = Set(userId), List(message))))
+      expectMsg(Right(GroupState(members = Set(userId), List(message))))
     }
 
     "feed should be returned in reverse order" in {
@@ -128,7 +115,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       groupEntity ! GroupEntity.AddMessage(groupId, userId, anotherMessage)
 
       //verify
-      expectMsg(Right(GroupState(groupId, members = Set(userId), List(anotherMessage, message))))
+      expectMsg(Right(GroupState(members = Set(userId), List(anotherMessage, message))))
     }
 
   }
