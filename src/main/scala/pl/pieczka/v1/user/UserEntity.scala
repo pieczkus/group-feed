@@ -26,19 +26,21 @@ object UserEntity {
 
   case class GetUser(userId: Int) extends UserCommand
 
-  case class RegisterUser(userId: Int, name: String) extends UserCommand
+  case class CreateUser(userId: Int, name: String) extends UserCommand
 
   sealed trait UserEvent extends PersistentEntity.EntityEvent
 
-  case class UserRegistered(user: UserState) extends UserEvent
+  case class UserCreated(user: UserState) extends UserEvent
 
-  case class UserNotRegistered(userId: Int) extends RuntimeException(s"User with id $userId not found")
+  case class UserNotFound(userId: Int) {
+    override def toString = s"User with id $userId not found"
+  }
 
-  case class UserAlreadyRegistered(userId: Int) extends RuntimeException(s"User with id $userId already registered")
+  case class UserAlreadyExists(userId: Int)
 
-  type MaybeUser[+A] = Either[UserNotRegistered, A]
+  type MaybeUser[+A] = Either[UserNotFound, A]
 
-  type MaybeRegister[+A] = Either[UserAlreadyRegistered, A]
+  type MaybeUserCreated[+A] = Either[UserAlreadyExists, A]
 
 }
 
@@ -50,24 +52,24 @@ class UserEntity extends PersistentEntity {
 
   override def additionalCommandHandling: Receive = {
 
-    case GetUser(id) if state.isEmpty => sender() ! Left(UserNotRegistered(id))
+    case GetUser(id) if state.isEmpty => sender() ! Left(UserNotFound(id))
 
     case GetUser(_) => sender() ! Right(state)
 
-    case RegisterUser(id, name) if state.isEmpty =>
+    case CreateUser(id, name) if state.isEmpty =>
       val caller = sender()
-      persist(UserRegistered(UserState(id, name))) { evt =>
+      persist(UserCreated(UserState(id, name))) { evt =>
         log.info("New user registered {}/{}", evt.user.id, evt.user.name)
         state = evt.user
         caller ! Right(state)
       }
 
-    case RegisterUser(id, _) => sender() ! Left(UserAlreadyRegistered(id))
+    case CreateUser(id, _) => sender() ! Left(UserAlreadyExists(id))
 
   }
 
   override def handleEvent(event: PersistentEntity.EntityEvent): Unit = event match {
-    case UserRegistered(user) =>
+    case UserCreated(user) =>
       state = user
   }
 }

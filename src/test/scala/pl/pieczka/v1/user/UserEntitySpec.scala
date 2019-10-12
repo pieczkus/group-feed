@@ -6,7 +6,6 @@ import akka.actor.ActorSystem
 import akka.cluster.Cluster
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import pl.pieczka.common.PersistentEntity
-import scala.concurrent.duration._
 
 class UserEntitySpec extends TestKit(ActorSystem("UserSystemTest"))
   with WordSpecLike
@@ -46,7 +45,7 @@ class UserEntitySpec extends TestKit(ActorSystem("UserSystemTest"))
       userEntity ! UserEntity.GetUser(userId)
 
       //verify
-      expectMsg(Left(UserEntity.UserNotRegistered(userId)))
+      expectMsg(Left(UserEntity.UserNotFound(userId)))
     }
 
     "register new user" in {
@@ -55,7 +54,7 @@ class UserEntitySpec extends TestKit(ActorSystem("UserSystemTest"))
       val name = "Bart"
 
       //then
-      userEntity ! UserEntity.RegisterUser(userId, name)
+      userEntity ! UserEntity.CreateUser(userId, name)
       userEntity ! UserEntity.GetUser(userId)
 
       //verify
@@ -69,10 +68,10 @@ class UserEntitySpec extends TestKit(ActorSystem("UserSystemTest"))
       val name = "Bart"
 
       //then
-      userEntity ! UserEntity.RegisterUser(userId, name)
+      userEntity ! UserEntity.CreateUser(userId, name)
 
       //verify
-      expectMsg(Left(UserEntity.UserAlreadyRegistered(userId)))
+      expectMsg(Left(UserEntity.UserAlreadyExists(userId)))
     }
   }
 }
