@@ -33,6 +33,14 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
             }
             case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
           }
+        } ~ path(IntNumber / "groups") { id =>
+          onComplete((usersManager ? UsersManager.FindUserById(id)).mapTo[UserEntity.MaybeUser[UserState]]) {
+            case Success(result) => result match {
+              case Right(user) => complete((StatusCodes.OK, user.groups))
+              case Left(error) => complete((StatusCodes.NotFound, error.toString))
+            }
+            case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
+          }
         }
       } ~
         post {
@@ -48,6 +56,4 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
         }
     }
   }
-
-
 }

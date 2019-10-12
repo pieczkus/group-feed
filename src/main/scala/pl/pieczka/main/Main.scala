@@ -11,7 +11,6 @@ import akka.stream.scaladsl.Sink
 
 object Main extends App {
 
-
   val conf = ConfigFactory.load.getConfig("groupfeed").resolve()
 
   implicit val system = ActorSystem("GroupFeedSystem", conf)
@@ -27,8 +26,7 @@ object Main extends App {
 
   val finalRoutes = pathPrefix("api")(definedRoutes)
 
-  val serverSource =
-    Http().bind(interface = "0.0.0.0", port = conf.getInt("httpPort"))
+  val serverSource = Http().bind(interface = "0.0.0.0", port = conf.getInt("httpPort"))
   val sink = Sink.foreach[Http.IncomingConnection](_.handleWith(finalRoutes))
   serverSource.to(sink).run
 

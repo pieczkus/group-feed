@@ -69,7 +69,6 @@ class UserEntity extends PersistentEntity {
   }
 
   override def handleEvent(event: PersistentEntity.EntityEvent): Unit = event match {
-    case UserCreated(user) =>
-      state = user
+    case UserCreated(user) => state = user
   }
 }
