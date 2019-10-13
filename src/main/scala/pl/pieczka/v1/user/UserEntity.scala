@@ -43,11 +43,19 @@ object UserEntity {
 
   case class MessagePublished(message: Message) extends UserEvent
 
-  case class UserNotFound(userId: Int) {
-    override def toString = s"User with id $userId not found"
+  sealed trait UserFailure {
+    val userId: Int
+
+    def message: String
   }
 
-  case class UserAlreadyExists(userId: Int)
+  case class UserNotFound(userId: Int) extends UserFailure {
+    override def message = s"User with id $userId not found"
+  }
+
+  case class UserAlreadyExists(userId: Int) extends UserFailure {
+    override def message = s"User with id $userId already exists"
+  }
 
   type MaybeUser[+A] = Either[UserNotFound, A]
 

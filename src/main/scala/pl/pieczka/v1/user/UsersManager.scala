@@ -19,6 +19,8 @@ object UsersManager {
 
   case class LeaveGroup(userId: Int, groupId: Int)
 
+  case class FindUserByToken(token: String)
+
 }
 
 class UsersManager extends Aggregate[UserEntity] {
@@ -35,6 +37,9 @@ class UsersManager extends Aggregate[UserEntity] {
 
     case FindUserById(userId) =>
       entityShardRegion.forward(UserEntity.GetUser(userId))
+
+    case FindUserByToken(token) =>
+      entityShardRegion.forward(UserEntity.GetUser(token.toIntOption.getOrElse(0)))
 
     case JoinGroup(userId, groupId) =>
       entityShardRegion.forward(UserEntity.AddGroup(userId, groupId))

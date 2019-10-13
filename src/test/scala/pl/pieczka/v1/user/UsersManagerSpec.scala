@@ -68,5 +68,17 @@ class UsersManagerSpec extends TestKit(ActorSystem("UsersManagerSystemTest"))
       entityProbe.expectMsg(UserEntity.RemoveGroup(userId, groupId))
     }
 
+    "translate and forward find by token command" in {
+      //given
+      val userId = 11
+      val token = "11"
+
+      //then
+      usersManager ! UsersManager.FindUserByToken(token)
+
+      //verify
+      entityProbe.expectMsg(UserEntity.GetUser(userId))
+    }
+
   }
 }

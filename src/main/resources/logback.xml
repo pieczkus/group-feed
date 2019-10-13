@@ -10,7 +10,7 @@
   </appender>
 
   <logger name="akka" level="info"/>
-  <logger name="com.packt" level="debug"/>
+  <logger name="pl.pieczka" level="debug"/>
 
   <root level="error">
     <appender-ref ref="console"/>
