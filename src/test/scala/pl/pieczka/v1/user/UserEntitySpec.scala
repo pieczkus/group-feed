@@ -73,5 +73,33 @@ class UserEntitySpec extends TestKit(ActorSystem("UserSystemTest"))
       //verify
       expectMsg(Left(UserEntity.UserAlreadyExists(userId)))
     }
+
+    "join group" in {
+      val userId = 10
+      val name = "Bart"
+      val groupId = 11
+
+      //then
+      userEntity ! UserEntity.AddGroup(userId, groupId)
+
+      //verify
+      expectMsg(Right(UserState(userId, name, Set(groupId))))
+    }
+
+    "leave group" in {
+      val userId = 10
+      val name = "Bart"
+      val groupId = 11
+
+      //then
+      userEntity ! UserEntity.RemoveGroup(userId, groupId)
+
+      //verify
+      expectMsg(Right(UserState(userId, name)))
+    }
+
+    "add message to user feed" in {
+
+    }
   }
 }

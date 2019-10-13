@@ -5,7 +5,7 @@ import akka.cluster.Cluster
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import akka.testkit.{ImplicitSender, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import pl.pieczka.common.{PersistentEntity, User}
+import pl.pieczka.common.{Message, PersistentEntity, User}
 
 class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
   with WordSpecLike
@@ -33,8 +33,8 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
   }
 
   val userId = 11;
-  val message = Message("1", "world", User(userId, "Bart"))
-  val anotherMessage = Message("2", "hello", User(userId, "Bart"))
+  val message = Message("1", 10, "world", User(userId, "Bart"))
+  val anotherMessage = Message("2", 10, "hello", User(userId, "Bart"))
 
   "GroupEntity" should {
     joinCluster()

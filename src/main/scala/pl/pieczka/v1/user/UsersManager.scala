@@ -15,6 +15,10 @@ object UsersManager {
 
   case class FindUserById(userId: Int)
 
+  case class JoinGroup(userId: Int, groupId: Int)
+
+  case class LeaveGroup(userId: Int, groupId: Int)
+
 }
 
 class UsersManager extends Aggregate[UserEntity] {
@@ -31,6 +35,12 @@ class UsersManager extends Aggregate[UserEntity] {
 
     case FindUserById(userId) =>
       entityShardRegion.forward(UserEntity.GetUser(userId))
+
+    case JoinGroup(userId, groupId) =>
+      entityShardRegion.forward(UserEntity.AddGroup(userId, groupId))
+
+    case LeaveGroup(userId, groupId) =>
+      entityShardRegion.forward(UserEntity.RemoveGroup(userId, groupId))
 
   }
 

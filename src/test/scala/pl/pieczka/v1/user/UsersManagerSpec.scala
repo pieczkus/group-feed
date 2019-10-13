@@ -44,5 +44,29 @@ class UsersManagerSpec extends TestKit(ActorSystem("UsersManagerSystemTest"))
       entityProbe.expectMsg(UserEntity.GetUser(userId))
     }
 
+    "translate and forward join group command" in {
+      //given
+      val userId = 11
+      val groupId = 12
+
+      //then
+      usersManager ! UsersManager.JoinGroup(userId, groupId)
+
+      //verify
+      entityProbe.expectMsg(UserEntity.AddGroup(userId, groupId))
+    }
+
+    "translate and forward leave group command" in {
+      //given
+      val userId = 11
+      val groupId = 12
+
+      //then
+      usersManager ! UsersManager.LeaveGroup(userId, groupId)
+
+      //verify
+      entityProbe.expectMsg(UserEntity.RemoveGroup(userId, groupId))
+    }
+
   }
 }

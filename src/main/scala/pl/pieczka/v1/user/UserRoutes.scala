@@ -40,6 +40,14 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
             }
             case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
           }
+        } ~ path(IntNumber / "feed") { userId =>
+          onComplete((usersManager ? UsersManager.FindUserById(userId)).mapTo[UserEntity.MaybeUser[UserState]]) {
+            case Success(result) => result match {
+              case Right(user) => complete((StatusCodes.OK, user.feed))
+              case Left(error) => complete((StatusCodes.NotFound, error.toString))
+            }
+            case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
+          }
         }
       } ~
         post {
@@ -51,8 +59,28 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
               }
               case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
             }
+          } ~ path(IntNumber / "groups") { userId =>
+            entity(as[JoinGroupInput]) { joinGroupInput =>
+              onComplete((usersManager ? UsersManager.JoinGroup(userId, joinGroupInput.groupId)).mapTo[UserEntity.MaybeUser[UserState]]) {
+                case Success(result) => result match {
+                  case Right(user) => complete((StatusCodes.OK, user.groups))
+                  case Left(error) => complete((StatusCodes.NotFound, error.toString))
+                }
+                case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
+              }
+            }
+          }
+        } ~ delete {
+        path(IntNumber / "groups" / IntNumber) { (userId, groupId) =>
+          onComplete((usersManager ? UsersManager.LeaveGroup(userId, groupId)).mapTo[UserEntity.MaybeUser[UserState]]) {
+            case Success(result) => result match {
+              case Right(user) => complete((StatusCodes.OK, user))
+              case Left(error) => complete((StatusCodes.NotFound, error.toString))
+            }
+            case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
           }
         }
+      }
     }
   }
 }

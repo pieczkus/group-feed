@@ -3,7 +3,7 @@ package pl.pieczka.v1.group
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import pl.pieczka.common.User
+import pl.pieczka.common.{Message, User}
 
 class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
   with WordSpecLike
@@ -68,7 +68,7 @@ class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
 
       //verify
       entityProbe.expectMsgPF() {
-        case GroupEntity.AddMessage(11, 11, Message(_, message.content, User(userId, "Bart"), _)) =>
+        case GroupEntity.AddMessage(11, 11, Message(_, 11, message.content, User(11, "Bart"), _)) =>
       }
     }
 

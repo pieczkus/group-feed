@@ -5,7 +5,8 @@ import pl.pieczka.v1.user.UsersManager.RegisterUser
 
 trait UserJsonProtocol extends GroupFeedJsonProtocol {
 
-  implicit val userStateFormat = jsonFormat3(UserState.apply)
+  implicit val joinGroupInputFormat = jsonFormat1(JoinGroupInput.apply)
+  implicit val userStateFormat = jsonFormat4(UserState.apply)
   implicit val registerUserFormat = jsonFormat2(RegisterUser.apply)
 
 }

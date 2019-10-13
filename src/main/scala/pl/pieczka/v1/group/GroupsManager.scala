@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.actor.Props
 import akka.util.Timeout
-import pl.pieczka.common.Aggregate
+import pl.pieczka.common.{Aggregate, Message}
 
 import scala.concurrent.duration._
 
@@ -46,7 +46,7 @@ class GroupsManager extends Aggregate[GroupEntity] {
 
     case PostMessage(groupId, userId, messageInput) =>
       val id = UUID.randomUUID().toString
-      val message = Message(id, messageInput.content, messageInput.user)
+      val message = Message(id, groupId, messageInput.content, messageInput.user)
       entityShardRegion.forward(GroupEntity.AddMessage(groupId, userId, message))
 
     case GetFeed(groupId, userId) =>

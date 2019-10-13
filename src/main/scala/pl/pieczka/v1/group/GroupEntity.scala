@@ -1,11 +1,8 @@
 package pl.pieczka.v1.group
 
-import java.util.Date
-
 import akka.actor.Props
-import pl.pieczka.common.{PersistentEntity, User}
-
-case class Message(id: String, content: String, user: User, createdOn: Date = new Date())
+import akka.cluster.pubsub.DistributedPubSub
+import pl.pieczka.common.{Message, PersistentEntity}
 
 case class GroupState(members: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty)
 
@@ -65,6 +62,8 @@ object GroupEntity {
 class GroupEntity extends PersistentEntity {
 
   import GroupEntity._
+  import akka.cluster.pubsub.DistributedPubSubMediator.Publish
+  val mediator = DistributedPubSub(context.system).mediator
 
   private var state = GroupState()
 
@@ -95,6 +94,7 @@ class GroupEntity extends PersistentEntity {
       persist(MessageAdded(groupId, userId, message)) { evt =>
         log.debug("Message \"{}\" added to {} by user {}", evt.message, evt.groupId, evt.userId)
         handleEvent(evt)
+        mediator ! Publish(s"group_${evt.groupId}", evt.message)
         caller ! Right(state)
       }
 
