@@ -2,7 +2,7 @@ package pl.pieczka.v1.group
 
 import akka.actor.Props
 import akka.cluster.pubsub.DistributedPubSub
-import pl.pieczka.common.{Message, PersistentEntity}
+import pl.pieczka.common.{Message, PersistentEntity, UserGroupAssociation}
 
 case class GroupState(members: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty)
 
@@ -62,30 +62,18 @@ object GroupEntity {
 class GroupEntity extends PersistentEntity {
 
   import GroupEntity._
-  import akka.cluster.pubsub.DistributedPubSubMediator.Publish
+  import akka.cluster.pubsub.DistributedPubSubMediator.{Publish, Subscribe}
+
   val mediator = DistributedPubSub(context.system).mediator
+  mediator ! Subscribe("user-groups", self)
 
   private var state = GroupState()
 
   override def additionalCommandHandling: Receive = {
 
-    case GetGroup(_) => sender() ! Right(state)
-
-    case AddUser(groupId, userId) =>
-      val caller = sender()
-      persist(UserAdded(groupId, userId)) { evt =>
-        log.info("User {} joined group {}", evt.userId, evt.groupId)
-        handleEvent(evt)
-        caller ! Right(state)
-      }
-
-    case RemoveUser(groupId, userId) =>
-      val caller = sender()
-      persist(UserRemoved(groupId, userId)) { evt =>
-        log.info("User {} left group {}", evt.userId, evt.groupId)
-        handleEvent(evt)
-        caller ! Right(state)
-      }
+    case GetGroup(_) =>
+      log.info("name {}", self.path.name)
+      sender() ! Right(state)
 
     case AddMessage(groupId, userId, _) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
 
@@ -103,6 +91,12 @@ class GroupEntity extends PersistentEntity {
     case GetMessages(_, _) =>
       sender() ! state.feed
 
+    case UserGroupAssociation(userId, groupId)  =>
+      log.info("dupodongo")
+      persist(UserAdded(groupId, userId)) { evt =>
+        log.info("User {} joined group {}", evt.userId, evt.groupId)
+        handleEvent(evt)
+      }
   }
 
   override def handleEvent(event: PersistentEntity.EntityEvent): Unit = event match {

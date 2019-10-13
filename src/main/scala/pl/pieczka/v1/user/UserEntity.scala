@@ -2,7 +2,7 @@ package pl.pieczka.v1.user
 
 import akka.actor.Props
 import akka.cluster.pubsub.DistributedPubSub
-import pl.pieczka.common.{Message, PersistentEntity}
+import pl.pieczka.common.{Message, PersistentEntity, UserGroupAssociation}
 
 object UserState {
   def empty: UserState = UserState(-1, "")
@@ -58,7 +58,7 @@ object UserEntity {
 class UserEntity extends PersistentEntity {
 
   import UserEntity._
-  import akka.cluster.pubsub.DistributedPubSubMediator.{Subscribe, SubscribeAck}
+  import akka.cluster.pubsub.DistributedPubSubMediator.{Subscribe, SubscribeAck, Publish}
 
   val mediator = DistributedPubSub(context.system).mediator
 
@@ -87,6 +87,7 @@ class UserEntity extends PersistentEntity {
         handleEvent(evt)
         // subscribe to the topic named "content"
         mediator ! Subscribe(s"group_${evt.groupId}", self)
+        mediator ! Publish("user-groups", UserGroupAssociation(userId, groupId))
         caller ! Right(state)
       }
 

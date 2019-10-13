@@ -45,17 +45,7 @@ class GroupRoutes(groupsManager: ActorRef)(implicit val ec: ExecutionContext) ex
           }
         }
       } ~ post {
-        path(IntNumber / "members") { groupId =>
-          entity(as[User]) { user =>
-            onComplete((groupsManager ? GroupsManager.JoinGroup(groupId, user.id)).mapTo[MaybeGroup[GroupState]]) {
-              case Success(result) => result match {
-                case Right(group) => complete((StatusCodes.OK, group))
-                case Left(error) => complete((StatusCodes.NotFound, error.toString))
-              }
-              case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
-            }
-          }
-        } ~ path(IntNumber / "feed") {groupId =>
+        path(IntNumber / "feed") {groupId =>
           entity(as[MessageInput]) { message =>
             onComplete((groupsManager ? GroupsManager.PostMessage(groupId, message.user.id, message)).mapTo[MaybeGroup[GroupState]]) {
               case Success(result) => result match {
@@ -64,16 +54,6 @@ class GroupRoutes(groupsManager: ActorRef)(implicit val ec: ExecutionContext) ex
               }
               case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
             }
-          }
-        }
-      } ~ delete {
-        path(IntNumber / "members" / IntNumber) { (groupId, userId) =>
-          onComplete((groupsManager ? GroupsManager.LeaveGroup(groupId, userId)).mapTo[MaybeGroup[GroupState]]) {
-            case Success(result) => result match {
-              case Right(group) => complete((StatusCodes.OK, group))
-              case Left(error) => complete((StatusCodes.NotFound, error.toString))
-            }
-            case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
           }
         }
       }

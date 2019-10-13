@@ -2,10 +2,12 @@ package pl.pieczka.v1.group
 
 import akka.actor.ActorSystem
 import akka.cluster.Cluster
+import akka.cluster.pubsub.DistributedPubSub
+import akka.cluster.pubsub.DistributedPubSubMediator.Publish
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import akka.testkit.{ImplicitSender, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import pl.pieczka.common.{Message, PersistentEntity, User}
+import pl.pieczka.common.{Message, PersistentEntity, User, UserGroupAssociation}
 
 class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
   with WordSpecLike
@@ -40,6 +42,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
     joinCluster()
 
     val groupEntity = ClusterSharding(system).shardRegion(GroupEntity.entityType)
+    val mediator = DistributedPubSub(system).mediator
 
     "create new group" in {
       //given
@@ -57,23 +60,11 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       val groupId = 10
 
       //then
-      groupEntity ! GroupEntity.AddUser(groupId, userId)
+      mediator ! Publish("user-groups", UserGroupAssociation(userId, groupId))
+      Thread.sleep(500)
+      groupEntity ! GroupEntity.GetGroup(groupId)
 
       //verify
-      expectMsg(Right(GroupState(members = Set(userId))))
-    }
-
-    "allow users to leave" in {
-      //given
-      val groupId = 10
-      val newUserId = 12;
-
-      //then
-      groupEntity ! GroupEntity.AddUser(groupId, newUserId)
-      groupEntity ! GroupEntity.RemoveUser(groupId, newUserId)
-
-      //verify
-      expectMsg(Right(GroupState(members = Set(userId, newUserId))))
       expectMsg(Right(GroupState(members = Set(userId))))
     }
 

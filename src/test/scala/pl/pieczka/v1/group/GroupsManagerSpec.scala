@@ -33,30 +33,6 @@ class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
       entityProbe.expectMsg(GroupEntity.GetGroup(groupId))
     }
 
-    "translate and forward join group command" in {
-      //given
-      val groupId = 11
-      val userId = 11
-
-      //then
-      groupsManager ! GroupsManager.JoinGroup(groupId, userId)
-
-      //verify
-      entityProbe.expectMsg(GroupEntity.AddUser(groupId, userId))
-    }
-
-    "translate and forward leave group command" in {
-      //given
-      val groupId = 11
-      val userId = 11
-
-      //then
-      groupsManager ! GroupsManager.LeaveGroup(groupId, userId)
-
-      //verify
-      entityProbe.expectMsg(GroupEntity.RemoveUser(groupId, userId))
-    }
-
     "translate and forward post message command" in {
       //given
       val groupId = 11

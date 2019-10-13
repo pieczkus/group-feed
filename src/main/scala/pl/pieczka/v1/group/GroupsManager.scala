@@ -16,10 +16,6 @@ object GroupsManager {
 
   case class FindGroupById(groupId: Int)
 
-  case class JoinGroup(groupId: Int, userId: Int)
-
-  case class LeaveGroup(groupId: Int, userId: Int)
-
   case class PostMessage(groupId: Int, userId: Int, messageInput: MessageInput)
 
   case class GetFeed(groupId: Int, userId: Int)
@@ -37,12 +33,6 @@ class GroupsManager extends Aggregate[GroupEntity] {
   override def receive: Receive = {
     case FindGroupById(groupId) =>
       entityShardRegion.forward(GroupEntity.GetGroup(groupId))
-
-    case JoinGroup(groupId, userId) =>
-      entityShardRegion.forward(GroupEntity.AddUser(groupId, userId))
-
-    case LeaveGroup(groupId, userId) =>
-      entityShardRegion.forward(GroupEntity.RemoveUser(groupId, userId))
 
     case PostMessage(groupId, userId, messageInput) =>
       val id = UUID.randomUUID().toString
