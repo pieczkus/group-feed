@@ -79,6 +79,5 @@ class UsersManagerSpec extends TestKit(ActorSystem("UsersManagerSystemTest"))
       //verify
       entityProbe.expectMsg(UserEntity.GetUser(userId))
     }
-
   }
 }

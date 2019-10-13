@@ -8,7 +8,8 @@ class GroupBootstrap extends Bootstrap {
   def start(system: ActorSystem) = {
     import system.dispatcher
     val groupsManager = system.actorOf(GroupsManager.props, GroupsManager.name)
-    List(new GroupRoutes(groupsManager))
+
+    List(new GroupRoutes(groupsManager)(system.dispatcher, system))
   }
 
 }

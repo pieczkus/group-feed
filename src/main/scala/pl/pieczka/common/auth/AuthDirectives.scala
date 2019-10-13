@@ -15,7 +15,7 @@ trait AuthDirectives {
     headerValueByName(tokenHeaderName).flatMap { token =>
       onComplete(verifyToken(token)).flatMap {
         case Success(Some(userId)) => provide(userId)
-        case _ => reject(AuthorizationFailedRejection)
+        case Failure(ex) => ex.printStackTrace(); reject(AuthorizationFailedRejection)
       }
     }
   }

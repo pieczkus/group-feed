@@ -14,7 +14,7 @@ object GroupsManager {
 
   def props = Props[GroupsManager]
 
-  case class FindGroupById(groupId: Int)
+  case class FindGroupById(groupId: Int, userId: Int)
 
   case class PostMessage(groupId: Int, userId: Int, messageInput: MessageInput)
 
@@ -31,8 +31,8 @@ class GroupsManager extends Aggregate[GroupEntity] {
   override def entityProps: Props = GroupEntity.props
 
   override def receive: Receive = {
-    case FindGroupById(groupId) =>
-      entityShardRegion.forward(GroupEntity.GetGroup(groupId))
+    case FindGroupById(groupId, userId) =>
+      entityShardRegion.forward(GroupEntity.GetGroup(groupId, userId))
 
     case PostMessage(groupId, userId, messageInput) =>
       val id = UUID.randomUUID().toString

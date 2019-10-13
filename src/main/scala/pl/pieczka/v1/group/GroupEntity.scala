@@ -18,7 +18,7 @@ object GroupEntity {
     override def entityId: String = groupId.toString
   }
 
-  case class GetGroup(groupId: Int) extends GroupCommand
+  case class GetGroup(groupId: Int, userId: Int) extends GroupCommand
 
 
   case class AddUser(groupId: Int, userId: Int) extends GroupCommand
@@ -71,7 +71,9 @@ class GroupEntity extends PersistentEntity {
 
   override def additionalCommandHandling: Receive = {
 
-    case GetGroup(_) =>
+    case GetGroup(groupId, userId) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
+
+    case GetGroup(_, _) =>
       log.info("name {}", self.path.name)
       sender() ! Right(state)
 
@@ -91,7 +93,7 @@ class GroupEntity extends PersistentEntity {
     case GetMessages(_, _) =>
       sender() ! state.feed
 
-    case UserGroupAssociation(userId, groupId)  =>
+    case UserGroupAssociation(userId, groupId) =>
       log.info("dupodongo")
       persist(UserAdded(groupId, userId)) { evt =>
         log.info("User {} joined group {}", evt.userId, evt.groupId)
