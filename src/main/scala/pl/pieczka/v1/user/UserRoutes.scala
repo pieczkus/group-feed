@@ -4,8 +4,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
-import pl.pieczka.common.GroupFeedRoutesDefinition
-import pl.pieczka.v1.user.UsersManager.RegisterUser
+import pl.pieczka.common.{GroupFeedRoutesDefinition, User}
 
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
@@ -44,8 +43,8 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
         }
       } ~
         post {
-          entity(as[RegisterUser]) { user =>
-            onComplete((usersManager ? UsersManager.RegisterUser(user.userId, user.name)).mapTo[UserEntity.MaybeUserCreated[UserState]]) {
+          entity(as[User]) { user =>
+            onComplete((usersManager ? UsersManager.RegisterUser(user.id, user.name)).mapTo[UserEntity.MaybeUserCreated[UserState]]) {
               case Success(result) => result match {
                 case Right(user) => complete((StatusCodes.OK, user))
                 case Left(error) => complete((StatusCodes.NotFound, error.toString))

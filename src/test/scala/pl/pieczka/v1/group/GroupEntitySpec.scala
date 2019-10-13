@@ -5,7 +5,7 @@ import akka.cluster.Cluster
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import akka.testkit.{ImplicitSender, TestKit}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import pl.pieczka.common.PersistentEntity
+import pl.pieczka.common.{PersistentEntity, User}
 
 class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
   with WordSpecLike
@@ -32,6 +32,10 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       extractShardId = idExtractor.extractShardId)
   }
 
+  val userId = 11;
+  val message = Message("1", "world", User(userId, "Bart"))
+  val anotherMessage = Message("2", "hello", User(userId, "Bart"))
+
   "GroupEntity" should {
     joinCluster()
 
@@ -51,7 +55,6 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
     "accept new users" in {
       //given
       val groupId = 10
-      val userId = 11;
 
       //then
       groupEntity ! GroupEntity.AddUser(groupId, userId)
@@ -63,7 +66,6 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
     "allow users to leave" in {
       //given
       val groupId = 10
-      val userId = 11;
       val newUserId = 12;
 
       //then
@@ -78,9 +80,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
     "should not accept messages from strangers" in {
       //given
       val groupId = 10
-      val userId = 11
       val strangerId = 111
-      val message = "hello"
 
       //then
       groupEntity ! GroupEntity.AddMessage(groupId, strangerId, message)
@@ -94,8 +94,6 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
     "should accept messages from members" in {
       //given
       val groupId = 10
-      val userId = 11
-      val message = "world"
 
       //then
       groupEntity ! GroupEntity.AddMessage(groupId, userId, message)
@@ -107,9 +105,6 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
     "feed should be returned in reverse order" in {
       //given
       val groupId = 10
-      val userId = 11
-      val message = "world"
-      val anotherMessage = "hello"
 
       //then
       groupEntity ! GroupEntity.AddMessage(groupId, userId, anotherMessage)

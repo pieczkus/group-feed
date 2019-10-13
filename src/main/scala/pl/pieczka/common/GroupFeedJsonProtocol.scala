@@ -16,4 +16,6 @@ trait GroupFeedJsonProtocol extends SprayJsonSupport with DefaultJsonProtocol {
     }
   }
 
+  implicit val userInputFormat = jsonFormat2(User.apply)
+
 }

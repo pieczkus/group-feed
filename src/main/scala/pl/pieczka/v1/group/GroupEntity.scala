@@ -1,9 +1,13 @@
 package pl.pieczka.v1.group
 
-import akka.actor.Props
-import pl.pieczka.common.PersistentEntity
+import java.util.Date
 
-case class GroupState(members: Set[Int] = Set.empty, feed: Seq[String] = Seq.empty)
+import akka.actor.Props
+import pl.pieczka.common.{PersistentEntity, User}
+
+case class Message(id: String, content: String, user: User, createdOn: Date = new Date())
+
+case class GroupState(members: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty)
 
 object GroupEntity {
 
@@ -24,9 +28,9 @@ object GroupEntity {
 
   case class RemoveUser(groupId: Int, userId: Int) extends GroupCommand
 
-  case class AddMessage(groupId: Int, userId: Int, content: String) extends GroupCommand
+  case class AddMessage(groupId: Int, userId: Int, message: Message) extends GroupCommand
 
-  case class GetFeed(groupId: Int, userId: Int) extends GroupCommand
+  case class GetMessages(groupId: Int, userId: Int) extends GroupCommand
 
   sealed trait GroupEvent extends PersistentEntity.EntityEvent
 
@@ -34,7 +38,7 @@ object GroupEntity {
 
   case class UserRemoved(groupId: Int, userId: Int) extends GroupEvent
 
-  case class MessageAdded(groupId: Int, userId: Int, content: String) extends GroupEvent
+  case class MessageAdded(groupId: Int, userId: Int, message: Message) extends GroupEvent
 
   sealed trait GroupFailure {
     val groupId: Int
@@ -62,7 +66,7 @@ class GroupEntity extends PersistentEntity {
 
   import GroupEntity._
 
-  private var state = new GroupState()
+  private var state = GroupState()
 
   override def additionalCommandHandling: Receive = {
 
@@ -86,17 +90,17 @@ class GroupEntity extends PersistentEntity {
 
     case AddMessage(groupId, userId, _) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
 
-    case AddMessage(groupId, userId, content) =>
+    case AddMessage(groupId, userId, message) =>
       val caller = sender()
-      persist(MessageAdded(groupId, userId, content)) { evt =>
-        log.debug("Message \"{}\" added to {} by user {}", evt.content, evt.groupId, evt.userId)
+      persist(MessageAdded(groupId, userId, message)) { evt =>
+        log.debug("Message \"{}\" added to {} by user {}", evt.message, evt.groupId, evt.userId)
         handleEvent(evt)
         caller ! Right(state)
       }
 
-    case GetFeed(groupId, userId) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
+    case GetMessages(groupId, userId) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
 
-    case GetFeed(_, _) =>
+    case GetMessages(_, _) =>
       sender() ! state.feed
 
   }
@@ -104,6 +108,6 @@ class GroupEntity extends PersistentEntity {
   override def handleEvent(event: PersistentEntity.EntityEvent): Unit = event match {
     case UserAdded(_, userId) => state = state.copy(members = state.members + userId)
     case UserRemoved(_, userId) => state = state.copy(members = state.members - userId)
-    case MessageAdded(_, _, content) => state = state.copy(feed = content +: state.feed)
+    case MessageAdded(_, _, message) => state = state.copy(feed = message +: state.feed)
   }
 }

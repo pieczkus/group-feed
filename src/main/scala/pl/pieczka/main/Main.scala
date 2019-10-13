@@ -8,6 +8,7 @@ import com.typesafe.config.ConfigFactory
 import pl.pieczka.v1.user.UserBootstrap
 import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.Sink
+import pl.pieczka.v1.group.GroupBootstrap
 
 object Main extends App {
 
@@ -19,7 +20,7 @@ object Main extends App {
 
   import system.dispatcher
 
-  val routes = List(new UserBootstrap())
+  val routes = List(new UserBootstrap(), new GroupBootstrap())
     .flatMap(_.start(system)).
     map(_.routes)
   val definedRoutes = routes.reduce(_ ~ _)

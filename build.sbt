@@ -25,7 +25,11 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
       "org.scalatest" %% "scalatest" % "3.0.8" % Test,
       "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.15.2" % Test
-    )
+    ),
+    // When running tests, we use this configuration
+    javaOptions in Test += s"-Dconfig.file=${sourceDirectory.value}/test/resources/application.test.conf",
+    // We need to fork a JVM process when testing so the Java options above are applied
+    fork in Test := true,
   )
 
 
