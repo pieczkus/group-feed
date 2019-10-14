@@ -73,7 +73,6 @@ class GroupEntity extends PersistentEntity[GroupState] {
     case GetGroup(groupId, userId) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
 
     case GetGroup(_, _) =>
-      log.info("name {}", self.path.name)
       sender() ! Right(state)
 
     case AddMessage(groupId, userId, _) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))

@@ -3,8 +3,10 @@ lazy val akkaVersion = "2.5.25"
 
 resolvers += Resolver.bintrayRepo("dnvriend", "maven")
 
-lazy val root = (project in file(".")).
-  settings(
+lazy val root = (project in file("."))
+  .enablePlugins(MultiJvmPlugin)
+  .configs(MultiJvm)
+  .settings(
     inThisBuild(List(
       organization := "com.example",
       scalaVersion := "2.13.1",
@@ -22,10 +24,12 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
       "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8",
 
+      "com.typesafe.akka" %% "akka-multi-node-testkit" % akkaVersion % Test,
       "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-testkit" % akkaVersion % Test,
       "org.scalatest" %% "scalatest" % "3.0.8" % Test,
-      "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.15.2" % Test
+      "com.github.dnvriend" %% "akka-persistence-inmemory" % "2.5.15.2" % Test,
+      "commons-io" % "commons-io" % "2.6" % Test
     ),
     // When running tests, we use this configuration
     javaOptions in Test += s"-Dconfig.file=${sourceDirectory.value}/test/resources/application.test.conf",

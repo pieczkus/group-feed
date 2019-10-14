@@ -4,7 +4,6 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import pl.pieczka.common.{Message, User}
-import pl.pieczka.v1.user.UserEntity
 
 class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
   with WordSpecLike
