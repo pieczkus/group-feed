@@ -1,15 +1,13 @@
 package pl.pieczka.v1.user
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
+import pl.pieczka.common.PersistentEntity.MaybeState
 import pl.pieczka.common.auth.AuthDirectives
-import pl.pieczka.common.{GroupFeedRoutesDefinition, User}
-import pl.pieczka.v1.user.UserEntity.MaybeUser
+import pl.pieczka.common.{GroupFeedRoutesDefinition, Message, User}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) extends GroupFeedRoutesDefinition with UserJsonProtocol with AuthDirectives {
 
@@ -26,68 +24,32 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
   override def routes(implicit system: ActorSystem, ec: ExecutionContext, materializer: Materializer): Route = {
     pathPrefix("user") {
       get {
-        path(IntNumber) { id =>
-          onComplete((usersManager ? UsersManager.FindUserById(id)).mapTo[UserEntity.MaybeUser[UserState]]) {
-            case Success(result) => result match {
-              case Right(user) => complete((StatusCodes.OK, user))
-              case Left(error) => complete((StatusCodes.NotFound, error.message))
-            }
-            case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
-          }
+        path(IntNumber) { userId =>
+          serviceAndComplete[UserState](UsersManager.FindUserById(userId), usersManager)
         } ~ path("group") {
           authenticate { userId =>
-            onComplete((usersManager ? UsersManager.FindUserById(userId)).mapTo[UserEntity.MaybeUser[UserState]]) {
-              case Success(result) => result match {
-                case Right(user) => complete((StatusCodes.OK, user.groups))
-                case Left(error) => complete((StatusCodes.NotFound, error.message))
-              }
-              case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
-            }
+            serviceAndComplete[Set[Int]](UsersManager.FindUserGroups(userId), usersManager)
           }
         } ~ path("feed") {
           authenticate { userId =>
-            onComplete((usersManager ? UsersManager.FindUserById(userId)).mapTo[UserEntity.MaybeUser[UserState]]) {
-              case Success(result) => result match {
-                case Right(user) => complete((StatusCodes.OK, user.feed))
-                case Left(error) => complete((StatusCodes.NotFound, error.message))
-              }
-              case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
-            }
+            serviceAndComplete[Seq[Message]](UsersManager.FindUserFeed(userId), usersManager)
           }
         }
       } ~
         post {
           entity(as[User]) { user =>
-            onComplete((usersManager ? UsersManager.RegisterUser(user.id, user.name)).mapTo[UserEntity.MaybeUserCreated[UserState]]) {
-              case Success(result) => result match {
-                case Right(user) => complete((StatusCodes.OK, user))
-                case Left(error) => complete((StatusCodes.NotFound, error.message))
-              }
-              case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
-            }
+            serviceAndComplete[UserState](UsersManager.RegisterUser(user.id, user.name), usersManager)
           } ~ path("group") {
             authenticate { userId =>
               entity(as[JoinGroupInput]) { joinGroupInput =>
-                onComplete((usersManager ? UsersManager.JoinGroup(userId, joinGroupInput.groupId)).mapTo[UserEntity.MaybeUser[UserState]]) {
-                  case Success(result) => result match {
-                    case Right(user) => complete((StatusCodes.OK, user.groups))
-                    case Left(error) => complete((StatusCodes.NotFound, error.message))
-                  }
-                  case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
-                }
+                serviceAndComplete[UserState](UsersManager.JoinGroup(userId, joinGroupInput.groupId), usersManager)
               }
             }
           }
         } ~ delete {
         path("group" / IntNumber) { groupId =>
           authenticate { userId =>
-            onComplete((usersManager ? UsersManager.LeaveGroup(userId, groupId)).mapTo[UserEntity.MaybeUser[UserState]]) {
-              case Success(result) => result match {
-                case Right(user) => complete((StatusCodes.OK, user))
-                case Left(error) => complete((StatusCodes.NotFound, error.message))
-              }
-              case Failure(error) => complete((StatusCodes.ServiceUnavailable, error))
-            }
+            serviceAndComplete[UserState](UsersManager.LeaveGroup(userId, groupId), usersManager)
           }
         }
       }
@@ -95,7 +57,7 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
   }
 
   override def verifyToken(token: String): Future[Option[Int]] = {
-    (usersManager ? UsersManager.FindUserByToken(token)).mapTo[MaybeUser[UserState]].map {
+    (usersManager ? UsersManager.FindUserByToken(token)).mapTo[MaybeState[UserState]].map {
       case Right(user) => Some(user.id)
       case _ => None
     }

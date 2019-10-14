@@ -49,10 +49,10 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       val groupId = 10
 
       //then
-      groupEntity ! GroupEntity.GetGroup(groupId)
+      groupEntity ! GroupEntity.GetGroup(groupId, userId)
 
       //verify
-      expectMsg(Right(GroupState()))
+      expectMsg(Left(GroupEntity.NotMember(groupId, userId)))
     }
 
     "accept new users" in {
@@ -62,10 +62,10 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       //then
       mediator ! Publish("user-groups", UserGroupAssociation(userId, groupId))
       Thread.sleep(500)
-      groupEntity ! GroupEntity.GetGroup(groupId)
+      groupEntity ! GroupEntity.GetGroup(groupId, userId)
 
       //verify
-      expectMsg(Right(GroupState(members = Set(userId))))
+      expectMsg(Right(GroupState(groupId, members = Set(userId))))
     }
 
     "should not accept messages from strangers" in {
@@ -75,11 +75,11 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
 
       //then
       groupEntity ! GroupEntity.AddMessage(groupId, strangerId, message)
-      groupEntity ! GroupEntity.GetGroup(groupId)
+      groupEntity ! GroupEntity.GetGroup(groupId, userId)
 
       //verify
       expectMsg(Left(GroupEntity.NotMember(groupId, strangerId)))
-      expectMsg(Right(GroupState(members = Set(userId))))
+      expectMsg(Right(GroupState(groupId, members = Set(userId))))
     }
 
     "should accept messages from members" in {
@@ -90,7 +90,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       groupEntity ! GroupEntity.AddMessage(groupId, userId, message)
 
       //verify
-      expectMsg(Right(GroupState(members = Set(userId), List(message))))
+      expectMsg(Right(GroupState(groupId, members = Set(userId), List(message))))
     }
 
     "feed should be returned in reverse order" in {
@@ -101,7 +101,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       groupEntity ! GroupEntity.AddMessage(groupId, userId, anotherMessage)
 
       //verify
-      expectMsg(Right(GroupState(members = Set(userId), List(anotherMessage, message))))
+      expectMsg(Right(GroupState(groupId, members = Set(userId), List(anotherMessage, message))))
     }
 
   }

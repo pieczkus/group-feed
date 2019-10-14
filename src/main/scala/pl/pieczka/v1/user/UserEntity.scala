@@ -2,6 +2,7 @@ package pl.pieczka.v1.user
 
 import akka.actor.Props
 import akka.cluster.pubsub.DistributedPubSub
+import pl.pieczka.common.PersistentEntity.Failure
 import pl.pieczka.common.{EntityStateObject, Message, PersistentEntity, UserGroupAssociation}
 
 object UserState {
@@ -43,24 +44,17 @@ object UserEntity {
 
   case class MessagePublished(message: Message) extends UserEvent
 
-  sealed trait UserFailure {
-    val userId: Int
+  case class UserNotFound(userId: Int) extends Failure {
+    override val id: Int = userId
 
-    def message: String
-  }
-
-  case class UserNotFound(userId: Int) extends UserFailure {
     override def message = s"User with id $userId not found"
   }
 
-  case class UserAlreadyExists(userId: Int) extends UserFailure {
+  case class UserAlreadyExists(userId: Int) extends Failure {
+    override val id: Int = userId
+
     override def message = s"User with id $userId already exists"
   }
-
-  type MaybeUser[+A] = Either[UserNotFound, A]
-
-  type MaybeUserCreated[+A] = Either[UserAlreadyExists, A]
-
 }
 
 class UserEntity extends PersistentEntity[UserState] {
@@ -123,6 +117,6 @@ class UserEntity extends PersistentEntity[UserState] {
     case MessagePublished(m) => state = state.copy(feed = m +: state.feed)
   }
 
-  override def snapshotAfterCount: Option[Int] = Some(5)
+  override def snapshotAfterCount: Option[Int] = Some(200)
 
 }

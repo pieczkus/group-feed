@@ -2,6 +2,7 @@ package pl.pieczka.v1.group
 
 import akka.actor.Props
 import akka.cluster.pubsub.DistributedPubSub
+import pl.pieczka.common.PersistentEntity.Failure
 import pl.pieczka.common.{EntityStateObject, Message, PersistentEntity, UserGroupAssociation}
 
 case class GroupState(id: Int, members: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty) extends EntityStateObject[Int]
@@ -37,25 +38,25 @@ object GroupEntity {
 
   case class MessageAdded(groupId: Int, userId: Int, message: Message) extends GroupEvent
 
-  sealed trait GroupFailure {
-    val groupId: Int
 
-    def message: String
-  }
+  case class GroupNotFound(groupId: Int) extends Failure {
+    override val id: Int = groupId
 
-  case class GroupNotFound(groupId: Int) extends GroupFailure {
     override def message = s"Group with id $groupId not found"
   }
 
-  case class GroupAlreadyExists(groupId: Int) extends GroupFailure {
+  case class GroupAlreadyExists(groupId: Int) extends Failure {
+    override val id: Int = groupId
+
     override def message = s"Group with id $groupId already exists"
   }
 
-  case class NotMember(groupId: Int, userId: Int) extends GroupFailure {
+  case class NotMember(groupId: Int, userId: Int) extends Failure {
+    override val id: Int = groupId
+
     override def message = s"User with id $userId is not member of group $groupId"
   }
 
-  type MaybeGroup[+A] = Either[GroupFailure, A]
 
 }
 
@@ -91,7 +92,7 @@ class GroupEntity extends PersistentEntity[GroupState] {
     case GetMessages(groupId, userId) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
 
     case GetMessages(_, _) =>
-      sender() ! state.feed
+      sender() ! Right(state.feed)
 
     case UserGroupAssociation(userId, groupId) if groupId == id.toInt =>
       persist(UserAdded(groupId, userId)) { evt =>
@@ -106,6 +107,6 @@ class GroupEntity extends PersistentEntity[GroupState] {
     case MessageAdded(_, _, message) => state = state.copy(feed = message +: state.feed)
   }
 
-  override def snapshotAfterCount: Option[Int] = Some(5)
+  override def snapshotAfterCount: Option[Int] = Some(200)
 
 }

@@ -37,6 +37,14 @@ object PersistentEntity {
     }
   }
 
+  trait Failure {
+    val id: Int
+
+    def message: String
+  }
+
+  type MaybeState[+A] = Either[Failure, A]
+
 }
 
 abstract class PersistentEntity[SO <: EntityStateObject[Int]] extends PersistentActor with ActorLogging {

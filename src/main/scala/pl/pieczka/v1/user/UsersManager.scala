@@ -3,7 +3,10 @@ package pl.pieczka.v1.user
 import akka.actor.Props
 import akka.util.Timeout
 import pl.pieczka.common.Aggregate
+
 import scala.concurrent.duration._
+import akka.pattern.ask
+import pl.pieczka.common.PersistentEntity.MaybeState
 
 object UsersManager {
 
@@ -21,11 +24,16 @@ object UsersManager {
 
   case class FindUserByToken(token: String)
 
+  case class FindUserGroups(userId: Int)
+
+  case class FindUserFeed(userId: Int)
+
 }
 
 class UsersManager extends Aggregate[UserState, UserEntity] {
 
   import UsersManager._
+  import context.dispatcher
 
   implicit val endpointTimeout: Timeout = Timeout(10.seconds)
 
@@ -46,6 +54,20 @@ class UsersManager extends Aggregate[UserState, UserEntity] {
 
     case LeaveGroup(userId, groupId) =>
       entityShardRegion.forward(UserEntity.RemoveGroup(userId, groupId))
+
+    case FindUserGroups(userId) =>
+      val caller = sender()
+      (entityShardRegion ? UserEntity.GetUser(userId)).mapTo[MaybeState[UserState]].map {
+        case Right(user) => caller ! Right(user.groups)
+        case l@Left(_) => caller ! l
+      }
+
+    case FindUserFeed(userId) =>
+      val caller = sender()
+      (entityShardRegion ? UserEntity.GetUser(userId)).mapTo[MaybeState[UserState]].map {
+        case Right(user) => caller ! Right(user.feed)
+        case l@Left(_) => caller ! l
+      }
 
   }
 

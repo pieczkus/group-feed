@@ -24,13 +24,14 @@ class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
 
     "translate and forward find group by id command" in {
       //given
+      val userId = 10
       val groupId = 11
 
       //then
-      groupsManager ! GroupsManager.FindGroupById(groupId)
+      groupsManager ! GroupsManager.FindGroupById(groupId, userId)
 
       //verify
-      entityProbe.expectMsg(GroupEntity.GetGroup(groupId))
+      entityProbe.expectMsg(GroupEntity.GetGroup(groupId, userId))
     }
 
     "translate and forward post message command" in {
