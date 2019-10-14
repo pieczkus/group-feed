@@ -4,6 +4,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
 import pl.pieczka.common.{Message, User}
+import pl.pieczka.v1.user.UserEntity
 
 class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
   with WordSpecLike
@@ -49,16 +50,34 @@ class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
       }
     }
 
-    "translate and forward get feed command" in {
+    "return feed when user is member of a group" in {
       //given
       val groupId = 11
       val userId = 11
+      val messages = Seq(Message("id", 1, "Hello", User(userId, "Bart")))
 
       //then
       groupsManager ! GroupsManager.GetFeed(groupId, userId)
 
       //verify
-      entityProbe.expectMsg(GroupEntity.GetMessages(groupId, userId))
+      entityProbe.expectMsg(GroupEntity.GetGroup(groupId, userId))
+      entityProbe.reply(Right(GroupState(groupId, Set(userId), messages)))
+      expectMsg(Right(messages))
+    }
+
+    "not return feed when user is not member of a group" in {
+      //given
+      val groupId = 11
+      val userId = 11
+      val messages = Seq(Message("id", 1, "Hello", User(userId, "Bart")))
+
+      //then
+      groupsManager ! GroupsManager.GetFeed(groupId, userId)
+
+      //verify
+      entityProbe.expectMsg(GroupEntity.GetGroup(groupId, userId))
+      entityProbe.reply(Right(GroupState(groupId, Set(10), messages)))
+      expectMsg(Left(GroupEntity.NotMember(groupId, userId)))
     }
 
   }

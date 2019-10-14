@@ -4,7 +4,10 @@ import java.util.UUID
 
 import akka.actor.Props
 import akka.util.Timeout
+import pl.pieczka.common.PersistentEntity.MaybeState
 import pl.pieczka.common.{Aggregate, Message}
+import akka.pattern.ask
+import pl.pieczka.v1.group.GroupEntity.NotMember
 
 import scala.concurrent.duration._
 
@@ -25,6 +28,7 @@ object GroupsManager {
 class GroupsManager extends Aggregate[GroupState, GroupEntity] {
 
   import GroupsManager._
+  import context.dispatcher
 
   implicit val endpointTimeout: Timeout = Timeout(10.seconds)
 
@@ -40,7 +44,12 @@ class GroupsManager extends Aggregate[GroupState, GroupEntity] {
       entityShardRegion.forward(GroupEntity.AddMessage(groupId, userId, message))
 
     case GetFeed(groupId, userId) =>
-      entityShardRegion.forward((GroupEntity.GetMessages(groupId, userId)))
+      val caller = sender()
+      (entityShardRegion ? GroupEntity.GetGroup(groupId, userId)).mapTo[MaybeState[GroupState]].map {
+        case Right(group) if !group.members.contains(userId) => caller ! Left(NotMember(groupId, userId))
+        case Right(group) => caller ! Right(group.feed)
+        case l@Left(_) => caller ! l
+      }
 
   }
 }

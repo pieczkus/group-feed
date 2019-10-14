@@ -28,8 +28,6 @@ object GroupEntity {
 
   case class AddMessage(groupId: Int, userId: Int, message: Message) extends GroupCommand
 
-  case class GetMessages(groupId: Int, userId: Int) extends GroupCommand
-
   sealed trait GroupEvent extends PersistentEntity.EntityEvent
 
   case class UserAdded(groupId: Int, userId: Int) extends GroupEvent
@@ -88,11 +86,6 @@ class GroupEntity extends PersistentEntity[GroupState] {
         mediator ! Publish(s"group_${evt.groupId}", evt.message)
         caller ! Right(state)
       }
-
-    case GetMessages(groupId, userId) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
-
-    case GetMessages(_, _) =>
-      sender() ! Right(state.feed)
 
     case UserGroupAssociation(userId, groupId) if groupId == id.toInt =>
       persist(UserAdded(groupId, userId)) { evt =>

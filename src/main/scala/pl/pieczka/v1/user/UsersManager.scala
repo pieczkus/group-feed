@@ -68,7 +68,6 @@ class UsersManager extends Aggregate[UserState, UserEntity] {
         case Right(user) => caller ! Right(user.feed)
         case l@Left(_) => caller ! l
       }
-
   }
 
 }
