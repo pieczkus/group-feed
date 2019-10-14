@@ -2,13 +2,13 @@ package pl.pieczka.v1.user
 
 import akka.actor.Props
 import akka.cluster.pubsub.DistributedPubSub
-import pl.pieczka.common.{Message, PersistentEntity, UserGroupAssociation}
+import pl.pieczka.common.{EntityStateObject, Message, PersistentEntity, UserGroupAssociation}
 
 object UserState {
   def empty: UserState = UserState(-1, "")
 }
 
-case class UserState(id: Int, name: String, groups: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty) {
+case class UserState(id: Int, name: String, groups: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty) extends EntityStateObject[Int] {
 
   def isEmpty: Boolean = id < 0
 }
@@ -63,14 +63,14 @@ object UserEntity {
 
 }
 
-class UserEntity extends PersistentEntity {
+class UserEntity extends PersistentEntity[UserState] {
 
   import UserEntity._
   import akka.cluster.pubsub.DistributedPubSubMediator.{Subscribe, SubscribeAck, Publish}
 
-  val mediator = DistributedPubSub(context.system).mediator
+  private val mediator = DistributedPubSub(context.system).mediator
 
-  private var state = UserState.empty
+  var state = UserState.empty
 
   override def additionalCommandHandling: Receive = {
 
@@ -82,7 +82,7 @@ class UserEntity extends PersistentEntity {
       val caller = sender()
       persist(UserCreated(UserState(id, name))) { evt =>
         log.info("New user registered {}/{}", evt.user.id, evt.user.name)
-        handleEvent(evt)
+        handleEventAndMaybeSnapshot(evt)
         caller ! Right(state)
       }
 
@@ -92,7 +92,7 @@ class UserEntity extends PersistentEntity {
       val caller = sender()
       persist(GroupAdded(userId, groupId)) { evt =>
         log.info("User {} joined group {}", evt.userId, evt.groupId)
-        handleEvent(evt)
+        handleEventAndMaybeSnapshot(evt)
         // subscribe to the topic named "content"
         mediator ! Subscribe(s"group_${evt.groupId}", self)
         mediator ! Publish("user-groups", UserGroupAssociation(userId, groupId))
@@ -103,13 +103,13 @@ class UserEntity extends PersistentEntity {
       val caller = sender()
       persist(GroupRemoved(userId, groupId)) { evt =>
         log.info("User {} left group {}", evt.userId, evt.groupId)
-        handleEvent(evt)
+        handleEventAndMaybeSnapshot(evt)
         caller ! Right(state)
       }
 
     case m: Message =>
       persist(MessagePublished(m)) { evt =>
-        handleEvent(evt)
+        handleEventAndMaybeSnapshot(evt)
       }
 
     case SubscribeAck(Subscribe(topic, None, `self`)) =>
@@ -122,4 +122,7 @@ class UserEntity extends PersistentEntity {
     case GroupRemoved(_, groupId) => state = state.copy(groups = state.groups - groupId)
     case MessagePublished(m) => state = state.copy(feed = m +: state.feed)
   }
+
+  override def snapshotAfterCount: Option[Int] = Some(5)
+
 }

@@ -9,6 +9,9 @@ import pl.pieczka.v1.user.UserBootstrap
 import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.Sink
 import pl.pieczka.v1.group.GroupBootstrap
+import scala.concurrent.duration._
+
+import scala.concurrent.Await
 
 object Main extends App {
 
@@ -30,5 +33,10 @@ object Main extends App {
   val serverSource = Http().bind(interface = "0.0.0.0", port = conf.getInt("httpPort"))
   val sink = Sink.foreach[Http.IncomingConnection](_.handleWith(finalRoutes))
   serverSource.to(sink).run
+
+  scala.sys.addShutdownHook {
+    system.terminate()
+    Await.result(system.whenTerminated, 30.seconds)
+  }
 
 }

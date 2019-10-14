@@ -2,9 +2,9 @@ package pl.pieczka.v1.group
 
 import akka.actor.Props
 import akka.cluster.pubsub.DistributedPubSub
-import pl.pieczka.common.{Message, PersistentEntity, UserGroupAssociation}
+import pl.pieczka.common.{EntityStateObject, Message, PersistentEntity, UserGroupAssociation}
 
-case class GroupState(members: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty)
+case class GroupState(id: Int, members: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty) extends EntityStateObject[Int]
 
 object GroupEntity {
 
@@ -59,15 +59,15 @@ object GroupEntity {
 
 }
 
-class GroupEntity extends PersistentEntity {
+class GroupEntity extends PersistentEntity[GroupState] {
 
   import GroupEntity._
   import akka.cluster.pubsub.DistributedPubSubMediator.{Publish, Subscribe}
 
-  val mediator = DistributedPubSub(context.system).mediator
+  private val mediator = DistributedPubSub(context.system).mediator
   mediator ! Subscribe("user-groups", self)
 
-  private var state = GroupState()
+  var state = GroupState(id.toInt)
 
   override def additionalCommandHandling: Receive = {
 
@@ -83,7 +83,7 @@ class GroupEntity extends PersistentEntity {
       val caller = sender()
       persist(MessageAdded(groupId, userId, message)) { evt =>
         log.debug("Message \"{}\" added to {} by user {}", evt.message, evt.groupId, evt.userId)
-        handleEvent(evt)
+        handleEventAndMaybeSnapshot(evt)
         mediator ! Publish(s"group_${evt.groupId}", evt.message)
         caller ! Right(state)
       }
@@ -93,11 +93,10 @@ class GroupEntity extends PersistentEntity {
     case GetMessages(_, _) =>
       sender() ! state.feed
 
-    case UserGroupAssociation(userId, groupId) =>
-      log.info("dupodongo")
+    case UserGroupAssociation(userId, groupId) if groupId == id.toInt =>
       persist(UserAdded(groupId, userId)) { evt =>
         log.info("User {} joined group {}", evt.userId, evt.groupId)
-        handleEvent(evt)
+        handleEventAndMaybeSnapshot(evt)
       }
   }
 
@@ -106,4 +105,7 @@ class GroupEntity extends PersistentEntity {
     case UserRemoved(_, userId) => state = state.copy(members = state.members - userId)
     case MessageAdded(_, _, message) => state = state.copy(feed = message +: state.feed)
   }
+
+  override def snapshotAfterCount: Option[Int] = Some(5)
+
 }

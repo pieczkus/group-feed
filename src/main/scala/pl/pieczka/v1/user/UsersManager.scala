@@ -23,7 +23,7 @@ object UsersManager {
 
 }
 
-class UsersManager extends Aggregate[UserEntity] {
+class UsersManager extends Aggregate[UserState, UserEntity] {
 
   import UsersManager._
 

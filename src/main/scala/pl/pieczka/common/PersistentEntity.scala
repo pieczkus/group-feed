@@ -39,13 +39,14 @@ object PersistentEntity {
 
 }
 
-abstract class PersistentEntity extends PersistentActor with ActorLogging {
+abstract class PersistentEntity[SO <: EntityStateObject[Int]] extends PersistentActor with ActorLogging {
 
   import PersistentEntity._
 
   val id: String = self.path.name
   val entityType: String = getClass.getSimpleName
   var eventsSinceLastSnapshot = 0
+  var state: SO
 
   override def persistenceId = id
 
@@ -86,6 +87,10 @@ abstract class PersistentEntity extends PersistentActor with ActorLogging {
       handleEvent(ev)
       eventsSinceLastSnapshot += 1
 
+    case SnapshotOffer(meta, snapshot: SO) =>
+      log.info("Recovering entity with a snapshot: {}", snapshot)
+      state = snapshot
+
     case RecoveryCompleted =>
       log.debug("Recovery completed for {} entity with id {}", entityType, id)
 
@@ -94,4 +99,28 @@ abstract class PersistentEntity extends PersistentActor with ActorLogging {
   def customRecover: Receive = PartialFunction.empty
 
   def handleEvent(event: EntityEvent): Unit
+
+  def snapshotAfterCount: Option[Int] = None
+
+  def handleEventAndMaybeSnapshot(event: EntityEvent): Unit = {
+    handleEvent(event)
+    if (snapshotAfterCount.isDefined) {
+      eventsSinceLastSnapshot += 1
+      maybeSnapshot
+    }
+  }
+
+  def maybeSnapshot: Unit = {
+    snapshotAfterCount.
+      filter(i => eventsSinceLastSnapshot >= i).
+      foreach { i =>
+        log.info("Taking snapshot because event count {} is > snapshot event limit of {}", eventsSinceLastSnapshot, i)
+        saveSnapshot(state)
+        eventsSinceLastSnapshot = 0
+      }
+  }
+}
+
+trait EntityStateObject[K] {
+  def id: K
 }

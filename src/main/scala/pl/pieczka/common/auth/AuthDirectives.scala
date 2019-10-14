@@ -4,7 +4,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{AuthorizationFailedRejection, Directive1}
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 
 trait AuthDirectives {
@@ -15,7 +15,7 @@ trait AuthDirectives {
     headerValueByName(tokenHeaderName).flatMap { token =>
       onComplete(verifyToken(token)).flatMap {
         case Success(Some(userId)) => provide(userId)
-        case Failure(ex) => ex.printStackTrace(); reject(AuthorizationFailedRejection)
+        case _ => reject(AuthorizationFailedRejection)
       }
     }
   }

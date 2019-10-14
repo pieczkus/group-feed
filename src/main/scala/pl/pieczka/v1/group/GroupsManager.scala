@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.actor.Props
 import akka.util.Timeout
-import pl.pieczka.common.{Aggregate, Message}
+import pl.pieczka.common.{Aggregate, EntityStateObject, Message}
 
 import scala.concurrent.duration._
 
@@ -22,7 +22,7 @@ object GroupsManager {
 
 }
 
-class GroupsManager extends Aggregate[GroupEntity] {
+class GroupsManager extends Aggregate[GroupState, GroupEntity] {
 
   import GroupsManager._
 

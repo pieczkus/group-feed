@@ -5,7 +5,7 @@ import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 
 import scala.reflect.ClassTag
 
-abstract class Aggregate[E <: PersistentEntity : ClassTag] extends Actor with ActorLogging {
+abstract class Aggregate[SO <: EntityStateObject[Int], E <: PersistentEntity[SO] : ClassTag] extends Actor with ActorLogging {
 
   val idExtractor = PersistentEntity.PersistentEntityIdExtractor(context.system)
 
