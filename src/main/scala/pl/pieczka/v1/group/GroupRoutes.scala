@@ -18,13 +18,6 @@ class GroupRoutes(groupsManager: ActorRef)(implicit val ec: ExecutionContext, sy
 
   lazy val userShardRegion = ClusterSharding(system).shardRegion("UserEntity")
 
-  /**
-   * Returns the routes defined for this endpoint
-   *
-   * @param system       The implicit system to use for building routes
-   * @param ec           The implicit execution context to use for routes
-   * @param materializer The implicit materializer to use for routes
-   */
   override def routes(implicit system: ActorSystem, ec: ExecutionContext, materializer: Materializer): Route = {
     pathPrefix("group") {
       get {

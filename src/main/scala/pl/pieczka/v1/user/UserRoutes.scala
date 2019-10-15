@@ -14,13 +14,6 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
   import akka.http.scaladsl.server.Directives._
   import akka.pattern.ask
 
-  /**
-   * Returns the routes defined for this endpoint
-   *
-   * @param system       The implicit system to use for building routes
-   * @param ec           The implicit execution context to use for routes
-   * @param materializer The implicit materializer to use for routes
-   */
   override def routes(implicit system: ActorSystem, ec: ExecutionContext, materializer: Materializer): Route = {
     pathPrefix("user") {
       get {

@@ -68,9 +68,11 @@ class UserEntity extends PersistentEntity[UserState] {
 
   override def additionalCommandHandling: Receive = {
 
-    case GetUser(id) if state.isEmpty => sender() ! Left(UserNotFound(id))
+    case GetUser(id) if state.isEmpty =>
+      sender() ! Left(UserNotFound(id))
 
-    case GetUser(_) => sender() ! Right(state)
+    case GetUser(_) =>
+      sender() ! Right(state)
 
     case CreateUser(id, name) if state.isEmpty =>
       val caller = sender()
@@ -80,7 +82,8 @@ class UserEntity extends PersistentEntity[UserState] {
         caller ! Right(state)
       }
 
-    case CreateUser(userId, _) => sender() ! Left(UserAlreadyExists(userId))
+    case CreateUser(userId, _) =>
+      sender() ! Left(UserAlreadyExists(userId))
 
     case AddGroup(userId, groupId) =>
       val caller = sender()

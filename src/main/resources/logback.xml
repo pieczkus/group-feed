@@ -9,7 +9,7 @@
     </encoder>
   </appender>
 
-  <logger name="akka" level="info"/>
+  <logger name="akka" level="debug"/>
   <logger name="pl.pieczka" level="debug"/>
 
   <root level="error">

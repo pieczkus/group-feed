@@ -56,7 +56,7 @@ abstract class PersistentEntity[SO <: EntityStateObject[Int]] extends Persistent
   var eventsSinceLastSnapshot = 0
   var state: SO
 
-  override def persistenceId = id
+  override def persistenceId = entityType + "_" + id
 
   context.setReceiveTimeout(5.minutes)
 

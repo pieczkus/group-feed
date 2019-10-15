@@ -38,6 +38,10 @@ class GroupsManager extends Aggregate[GroupState, GroupEntity] {
   override def entityProps: Props = GroupEntity.props
 
   override def receive: Receive = {
+
+    case CreateNewGroup(groupId, userId) =>
+      entityShardRegion.forward(GroupEntity.CreateGroup(abs(groupId), abs(userId)))
+
     case FindGroupById(groupId, userId) =>
       entityShardRegion.forward(GroupEntity.GetGroup(abs(groupId), abs(userId)))
 
