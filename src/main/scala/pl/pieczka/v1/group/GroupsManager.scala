@@ -8,6 +8,7 @@ import pl.pieczka.common.PersistentEntity.MaybeState
 import pl.pieczka.common.{Aggregate, Message}
 import akka.pattern.ask
 import pl.pieczka.v1.group.GroupEntity.NotMember
+import Math.abs
 
 import scala.concurrent.duration._
 
@@ -38,16 +39,16 @@ class GroupsManager extends Aggregate[GroupState, GroupEntity] {
 
   override def receive: Receive = {
     case FindGroupById(groupId, userId) =>
-      entityShardRegion.forward(GroupEntity.GetGroup(groupId, userId))
+      entityShardRegion.forward(GroupEntity.GetGroup(abs(groupId), abs(userId)))
 
     case PostMessage(groupId, userId, messageInput) =>
       val id = UUID.randomUUID().toString
       val message = Message(id, groupId, messageInput.content, messageInput.user)
-      entityShardRegion.forward(GroupEntity.AddMessage(groupId, userId, message))
+      entityShardRegion.forward(GroupEntity.AddMessage(abs(groupId), abs(userId), message))
 
     case GetFeed(groupId, userId) =>
       val caller = sender()
-      (entityShardRegion ? GroupEntity.GetGroup(groupId, userId)).mapTo[MaybeState[GroupState]].map {
+      (entityShardRegion ? GroupEntity.GetGroup(abs(groupId), abs(userId))).mapTo[MaybeState[GroupState]].map {
         case Right(group) if !group.members.contains(userId) => caller ! Left(NotMember(groupId, userId))
         case Right(group) => caller ! Right(group.feed)
         case l@Left(_) => caller ! l
