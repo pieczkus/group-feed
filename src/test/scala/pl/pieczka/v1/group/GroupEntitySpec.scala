@@ -6,14 +6,15 @@ import akka.cluster.pubsub.DistributedPubSub
 import akka.cluster.pubsub.DistributedPubSubMediator.Publish
 import akka.cluster.sharding.{ClusterSharding, ClusterShardingSettings}
 import akka.testkit.{ImplicitSender, TestKit}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
+import org.scalatest.{BeforeAndAfterAll, FeatureSpecLike, GivenWhenThen, Matchers}
 import pl.pieczka.common.{Message, PersistentEntity, User, UserGroupAssociation}
 
 class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
-  with WordSpecLike
   with Matchers
+  with FeatureSpecLike
   with BeforeAndAfterAll
-  with ImplicitSender {
+  with ImplicitSender
+  with GivenWhenThen {
 
   override def afterAll: Unit = {
     TestKit.shutdownActorSystem(system)
@@ -38,72 +39,116 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
   val message = Message("1", 10, "world", User(userId, "Bart"))
   val anotherMessage = Message("2", 10, "hello", User(userId, "Bart"))
 
-  "GroupEntity" should {
-    joinCluster()
+  joinCluster()
 
-    val groupEntity = ClusterSharding(system).shardRegion(GroupEntity.entityType)
-    val mediator = DistributedPubSub(system).mediator
+  val groupEntity = ClusterSharding(system).shardRegion(GroupEntity.entityType)
+  val mediator = DistributedPubSub(system).mediator
 
-    "create new group" in {
-      //given
-      val groupId = 10
+  feature("Not created croup is not operational") {
+    scenario("User is not able to get such group") {
+      Given("Id of not yet created group")
+      val groupId = 99
 
-      //then
+      When("Asked about group")
       groupEntity ! GroupEntity.GetGroup(groupId, userId)
 
-      //verify
-      expectMsg(Left(GroupEntity.NotMember(groupId, userId)))
+      Then("Group not found should be returned")
+      expectMsg(Left(GroupEntity.GroupNotFound(groupId)))
     }
+  }
 
-    "accept new users" in {
-      //given
+  feature("User can create new group") {
+
+    scenario("Group not yet exists") {
+      Given("Unique group id and user id")
       val groupId = 10
 
-      //then
-      mediator ! Publish("user-groups", UserGroupAssociation(userId, groupId))
+      When("Create group message is sent")
+      groupEntity ! GroupEntity.CreateGroup(groupId, userId)
+
+      Then("Group should be created with user as member")
+      expectMsg(Right(GroupState(groupId, Set(userId))))
+    }
+
+    scenario("Group already exists") {
+      Given("Id of existing group")
+      val groupId = 10
+
+      When("")
+      groupEntity ! GroupEntity.CreateGroup(groupId, userId)
+
+      Then("Group already exists should be returned")
+      expectMsg(Left(GroupEntity.GroupAlreadyExists(groupId)))
+    }
+  }
+
+  feature("Users can join group") {
+
+    scenario("User is not yet member of a group") {
+      Given("Id of existing group and new user id")
+      val groupId = 10
+      val newUserId = 100
+
+      When("User joining notification is sent")
+      mediator ! Publish("user-groups", UserGroupAssociation(newUserId, groupId))
       Thread.sleep(500)
       groupEntity ! GroupEntity.GetGroup(groupId, userId)
 
-      //verify
-      expectMsg(Right(GroupState(groupId, members = Set(userId))))
+      Then("New user id is within members")
+      expectMsg(Right(GroupState(groupId, members = Set(userId, newUserId))))
     }
 
-    "should not accept messages from strangers" in {
-      //given
+    scenario("User is already member of a group") {
+      Given("Id of existing group and user id of a group member")
+      val groupId = 10
+      val memberUserId = 100
+
+      When("User joining notification is sent")
+      mediator ! Publish("user-groups", UserGroupAssociation(memberUserId, groupId))
+      Thread.sleep(500)
+      groupEntity ! GroupEntity.GetGroup(groupId, userId)
+
+      Then("User id is not duplicated")
+      expectMsg(Right(GroupState(groupId, members = Set(userId, memberUserId))))
+    }
+  }
+
+  feature("User posting messages in group") {
+
+    scenario("User is not member of a group") {
+      Given("Group id and id of a uses who is not a member")
       val groupId = 10
       val strangerId = 111
 
-      //then
+      When("Message is posted")
       groupEntity ! GroupEntity.AddMessage(groupId, strangerId, message)
       groupEntity ! GroupEntity.GetGroup(groupId, userId)
 
-      //verify
+      Then("Message is not added into group feed")
       expectMsg(Left(GroupEntity.NotMember(groupId, strangerId)))
-      expectMsg(Right(GroupState(groupId, members = Set(userId))))
+      expectMsg(Right(GroupState(groupId, members = Set(userId, 100))))
     }
 
-    "should accept messages from members" in {
-      //given
+    scenario("User is member of a group") {
+      Given("Group id and id of a uses who is a member")
       val groupId = 10
 
-      //then
+      When("Message is posted")
       groupEntity ! GroupEntity.AddMessage(groupId, userId, message)
 
-      //verify
-      expectMsg(Right(GroupState(groupId, members = Set(userId), List(message))))
+      Then("Message is not added into group feed")
+      expectMsg(Right(GroupState(groupId, members = Set(userId, 100), Seq(message))))
     }
 
-    "feed should be returned in reverse order" in {
-      //given
+    scenario("Messages are ordered") {
+      Given("Group id and id of a uses who is a member")
       val groupId = 10
 
-      //then
+      When("Another message is posted")
       groupEntity ! GroupEntity.AddMessage(groupId, userId, anotherMessage)
 
-      //verify
-      expectMsg(Right(GroupState(groupId, members = Set(userId), List(anotherMessage, message))))
+      Then("Message is not added into group feed")
+      expectMsg(Right(GroupState(groupId, members = Set(userId, 100), Seq(anotherMessage, message))))
     }
-
   }
-
 }

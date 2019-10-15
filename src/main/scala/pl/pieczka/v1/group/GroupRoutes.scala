@@ -2,11 +2,10 @@ package pl.pieczka.v1.group
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.cluster.sharding.ClusterSharding
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
 import pl.pieczka.common.auth.AuthDirectives
-import pl.pieczka.common.{GroupFeedRoutesDefinition, Message}
+import pl.pieczka.common.{GroupFeedRoutesDefinition, Message, User}
 import pl.pieczka.common.PersistentEntity.MaybeState
 import pl.pieczka.v1.user.{UserEntity, UserState}
 
@@ -37,8 +36,10 @@ class GroupRoutes(groupsManager: ActorRef)(implicit val ec: ExecutionContext, sy
           }
         }
       } ~ post {
-        path(IntNumber / "feed") { groupId =>
-          authenticate { userId =>
+        authenticate { userId =>
+          entity(as[GroupInput]) { group =>
+            serviceAndComplete[GroupState](GroupsManager.CreateNewGroup(group.id, userId), groupsManager)
+          } ~ path(IntNumber / "feed") { groupId =>
             entity(as[MessageInput]) { message =>
               serviceAndComplete[GroupState](GroupsManager.PostMessage(groupId, userId, message), groupsManager)
             }

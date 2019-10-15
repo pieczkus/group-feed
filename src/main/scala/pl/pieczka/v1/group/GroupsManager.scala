@@ -17,6 +17,8 @@ object GroupsManager {
 
   def props = Props[GroupsManager]
 
+  case class CreateNewGroup(groupId: Int, userId: Int)
+
   case class FindGroupById(groupId: Int, userId: Int)
 
   case class PostMessage(groupId: Int, userId: Int, messageInput: MessageInput)

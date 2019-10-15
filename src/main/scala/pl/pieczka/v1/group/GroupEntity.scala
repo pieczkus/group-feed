@@ -5,7 +5,13 @@ import akka.cluster.pubsub.DistributedPubSub
 import pl.pieczka.common.PersistentEntity.Failure
 import pl.pieczka.common.{EntityStateObject, Message, PersistentEntity, UserGroupAssociation}
 
-case class GroupState(id: Int, members: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty) extends EntityStateObject[Int]
+object GroupState {
+  def empty: GroupState = GroupState(-1)
+}
+
+case class GroupState(id: Int, members: Set[Int] = Set.empty, feed: Seq[Message] = Seq.empty) extends EntityStateObject[Int] {
+  def isEmpty: Boolean = id < 0
+}
 
 object GroupEntity {
 
@@ -21,6 +27,7 @@ object GroupEntity {
 
   case class GetGroup(groupId: Int, userId: Int) extends GroupCommand
 
+  case class CreateGroup(groupId: Int, userId: Int) extends GroupCommand
 
   case class AddUser(groupId: Int, userId: Int) extends GroupCommand
 
@@ -29,6 +36,8 @@ object GroupEntity {
   case class AddMessage(groupId: Int, userId: Int, message: Message) extends GroupCommand
 
   sealed trait GroupEvent extends PersistentEntity.EntityEvent
+
+  case class GroupCreated(groupId: Int, userId: Int) extends GroupEvent
 
   case class UserAdded(groupId: Int, userId: Int) extends GroupEvent
 
@@ -55,7 +64,6 @@ object GroupEntity {
     override def message = s"User with id $userId is not member of group $groupId"
   }
 
-
 }
 
 class GroupEntity extends PersistentEntity[GroupState] {
@@ -66,27 +74,41 @@ class GroupEntity extends PersistentEntity[GroupState] {
   private val mediator = DistributedPubSub(context.system).mediator
   mediator ! Subscribe("user-groups", self)
 
-  var state = GroupState(id.toInt)
+  var state = GroupState.empty
 
   override def additionalCommandHandling: Receive = {
 
-    case GetGroup(groupId, userId) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
+    case CreateGroup(groupId, _) if !state.isEmpty =>
+      sender() ! Left(GroupAlreadyExists(groupId))
+
+    case CreateGroup(groupId, userId) =>
+      persist(GroupCreated(groupId, userId)) { evt =>
+        log.info("Group {} created by user {}", evt.groupId, evt.userId)
+        handleEvent(evt)
+        sender() ! Right(state)
+      }
+
+    case GetGroup(groupId, _) if state.isEmpty =>
+      sender() ! Left(GroupNotFound(groupId))
+
+    case GetGroup(groupId, userId) if !state.members.contains(userId) =>
+      sender() ! Left(NotMember(groupId, userId))
 
     case GetGroup(_, _) =>
       sender() ! Right(state)
 
-    case AddMessage(groupId, userId, _) if !state.members.contains(userId) => sender() ! Left(NotMember(groupId, userId))
+    case AddMessage(groupId, userId, _) if !state.members.contains(userId) =>
+      sender() ! Left(NotMember(groupId, userId))
 
     case AddMessage(groupId, userId, message) =>
-      val caller = sender()
       persist(MessageAdded(groupId, userId, message)) { evt =>
         log.debug("Message \"{}\" added to {} by user {}", evt.message, evt.groupId, evt.userId)
         handleEventAndMaybeSnapshot(evt)
         mediator ! Publish(s"group_${evt.groupId}", evt.message)
-        caller ! Right(state)
+        sender() ! Right(state)
       }
 
-    case UserGroupAssociation(userId, groupId) if groupId == id.toInt =>
+    case UserGroupAssociation(userId, groupId) if groupId == state.id =>
       persist(UserAdded(groupId, userId)) { evt =>
         log.info("User {} joined group {}", evt.userId, evt.groupId)
         handleEventAndMaybeSnapshot(evt)
@@ -94,6 +116,7 @@ class GroupEntity extends PersistentEntity[GroupState] {
   }
 
   override def handleEvent(event: PersistentEntity.EntityEvent): Unit = event match {
+    case GroupCreated(groupId, userId) => state = state.copy(id = groupId, members = state.members + userId)
     case UserAdded(_, userId) => state = state.copy(members = state.members + userId)
     case UserRemoved(_, userId) => state = state.copy(members = state.members - userId)
     case MessageAdded(_, _, message) => state = state.copy(feed = message +: state.feed)
