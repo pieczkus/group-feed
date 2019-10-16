@@ -67,7 +67,7 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
       groupEntity ! GroupEntity.CreateGroup(groupId, userId)
 
       Then("Group should be created with user as member")
-      expectMsg(Right(GroupState(groupId, Set(userId))))
+      expectMsg(Right(GroupState(groupId)))
     }
 
     scenario("Group already exists") {
@@ -87,15 +87,14 @@ class GroupEntitySpec extends TestKit(ActorSystem("GroupSystemTest"))
     scenario("User is not yet member of a group") {
       Given("Id of existing group and new user id")
       val groupId = 10
-      val newUserId = 100
 
       When("User joining notification is sent")
-      mediator ! Publish("user-groups", UserGroupAssociation(newUserId, groupId))
+      mediator ! Publish("user-groups", UserGroupAssociation(userId, groupId))
       Thread.sleep(500)
       groupEntity ! GroupEntity.GetGroup(groupId, userId)
 
       Then("New user id is within members")
-      expectMsg(Right(GroupState(groupId, members = Set(userId, newUserId))))
+      expectMsg(Right(GroupState(groupId, members = Set(userId, userId))))
     }
 
     scenario("User is already member of a group") {

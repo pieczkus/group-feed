@@ -9,7 +9,7 @@ import akka.http.scaladsl.server.Directives.pathPrefix
 import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{Matchers, WordSpec}
-import pl.pieczka.v1.user.{UserBootstrap, UserJsonProtocol}
+import pl.pieczka.v1.user.{JoinGroupInput, UserBootstrap, UserJsonProtocol}
 
 import scala.concurrent.duration._
 import akka.http.scaladsl.server.Directives._
@@ -77,7 +77,18 @@ class GroupRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scal
       request ~> finalRoutes ~> check {
         status should ===(StatusCodes.OK)
         contentType should ===(ContentTypes.`application/json`)
-        entityAs[String] should ===("""{"response":{"feed":[],"id":1,"members":[1]}}""")
+        entityAs[String] should ===("""{"response":{"feed":[],"id":1,"members":[]}}""")
+      }
+    }
+
+    "return 200 and user state after joining group (POST /api/user/group)" in {
+      val joinGroupInput = JoinGroupInput(1)
+      val joinGroupEntity = Marshal(joinGroupInput).to[MessageEntity].futureValue
+
+      val request = Post("/api/user/group").withHeaders(Seq(RawHeader("X-Token", "1"))).withEntity(joinGroupEntity)
+      request ~> Route.seal(finalRoutes) ~> check {
+        status should ===(StatusCodes.OK)
+        entityAs[String] should ===("""{"response":{"feed":[],"groups":[1],"id":1,"name":"Bart"}}""")
       }
     }
 

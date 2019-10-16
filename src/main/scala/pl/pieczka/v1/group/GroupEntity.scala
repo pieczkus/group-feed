@@ -116,7 +116,7 @@ class GroupEntity extends PersistentEntity[GroupState] {
   }
 
   override def handleEvent(event: PersistentEntity.EntityEvent): Unit = event match {
-    case GroupCreated(groupId, userId) => state = state.copy(id = groupId, members = state.members + userId)
+    case GroupCreated(groupId, _) => state = state.copy(id = groupId)
     case UserAdded(_, userId) => state = state.copy(members = state.members + userId)
     case UserRemoved(_, userId) => state = state.copy(members = state.members - userId)
     case MessageAdded(_, _, message) => state = state.copy(feed = message +: state.feed)
