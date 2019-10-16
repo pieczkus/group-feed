@@ -1,6 +1,21 @@
 # Group-Feed 
 Small project attempting to demonstrate akka ecosystem in simplified group posting
 
+## Build and run
+
+
+Run tests
+
+```
+sbt test multi-jvm:test
+```
+
+Run app
+
+```
+sbt run
+```
+
 ## Sample usage
 
 First new user needs to be registered
@@ -35,6 +50,11 @@ New message is now included in group feed
 Let's verify if message was propagated to group members feed
 
 ```
-{"response":[{"content":"Hello World","createdOn":1571212943474,"groupId":1,"id":"188be46b-9781-410c-a7e4-3ef13b4b22fd","user":{"id":1,"name":"Bart"}}]}
+curl http://localhost:8080/api/user/feed -H 'X-Token: 1'
 ```
 
+## Further work/possible improvements
+
+- delivery guarantee in distributed pub sub is at most once (messages can be lost). To achieve at least once Kafka might be used instead
+- replace Java serialization of messages
+- use akka streams and leverage backpressure for fetching feeds 
