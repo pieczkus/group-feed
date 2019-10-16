@@ -3,7 +3,7 @@ package pl.pieczka.v1.user
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpecLike}
-import pl.pieczka.common.{Message, User}
+import pl.pieczka.common.{Message, PageParams, User}
 
 class UsersManagerSpec extends TestKit(ActorSystem("UsersManagerSystemTest"))
   with WordSpecLike
@@ -87,7 +87,7 @@ class UsersManagerSpec extends TestKit(ActorSystem("UsersManagerSystemTest"))
       val messages = Seq(Message("id", 1, "Hello", User(userId, "Bart")))
 
       //then
-      usersManager ! UsersManager.FindUserFeed(userId)
+      usersManager ! UsersManager.FindUserFeed(userId, PageParams())
 
       //verify
       entityProbe.expectMsg(UserEntity.GetUser(userId))

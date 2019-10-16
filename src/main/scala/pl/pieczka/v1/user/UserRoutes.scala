@@ -5,11 +5,12 @@ import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
 import pl.pieczka.common.PersistentEntity.MaybeState
 import pl.pieczka.common.auth.AuthDirectives
-import pl.pieczka.common.{GroupFeedRoutesDefinition, Message, User}
+import pl.pieczka.common.{GroupFeedRoutesDefinition, Message, PagingDirectives, User}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) extends GroupFeedRoutesDefinition with UserJsonProtocol with AuthDirectives {
+class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) extends GroupFeedRoutesDefinition
+  with UserJsonProtocol with AuthDirectives with PagingDirectives {
 
   import akka.http.scaladsl.server.Directives._
   import akka.pattern.ask
@@ -24,8 +25,10 @@ class UserRoutes(usersManager: ActorRef)(implicit val ec: ExecutionContext) exte
             serviceAndComplete[Set[Int]](UsersManager.FindUserGroups(userId), usersManager)
           }
         } ~ path("feed") {
-          authenticate { userId =>
-            serviceAndComplete[Seq[Message]](UsersManager.FindUserFeed(userId), usersManager)
+          pageParams { pageParams =>
+            authenticate { userId =>
+              serviceAndComplete[Seq[Message]](UsersManager.FindUserFeed(userId, pageParams), usersManager)
+            }
           }
         }
       } ~

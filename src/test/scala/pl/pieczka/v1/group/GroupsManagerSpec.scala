@@ -3,7 +3,7 @@ package pl.pieczka.v1.group
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{ImplicitSender, TestKit, TestProbe}
 import org.scalatest.{BeforeAndAfterAll, FeatureSpecLike, GivenWhenThen, Matchers}
-import pl.pieczka.common.{Message, User}
+import pl.pieczka.common.{Message, PageParams, User}
 
 class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
   with FeatureSpecLike
@@ -57,7 +57,7 @@ class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
       val messages = Seq(Message("id", 1, "Hello", User(userId, "Bart")))
 
       When("GetFeed message is received")
-      groupsManager ! GroupsManager.GetFeed(groupId, userId)
+      groupsManager ! GroupsManager.GetFeed(groupId, userId, PageParams())
 
       Then("Group is fetched by it's it")
       entityProbe.expectMsg(GroupEntity.GetGroup(groupId, userId))
@@ -73,7 +73,7 @@ class GroupsManagerSpec extends TestKit(ActorSystem("GroupsManagerSystemTest"))
       val messages = Seq(Message("id", 1, "Hello", User(userId, "Bart")))
 
       When("GetFeed message is received")
-      groupsManager ! GroupsManager.GetFeed(groupId, userId)
+      groupsManager ! GroupsManager.GetFeed(groupId, userId, PageParams())
 
       Then("Group is fetched by it's it")
       entityProbe.expectMsg(GroupEntity.GetGroup(groupId, userId))

@@ -2,7 +2,7 @@ package pl.pieczka.v1.user
 
 import akka.actor.Props
 import akka.util.Timeout
-import pl.pieczka.common.Aggregate
+import pl.pieczka.common.{Aggregate, PageParams}
 
 import scala.concurrent.duration._
 import akka.pattern.ask
@@ -27,7 +27,7 @@ object UsersManager {
 
   case class FindUserGroups(userId: Int)
 
-  case class FindUserFeed(userId: Int)
+  case class FindUserFeed(userId: Int, pageParams: PageParams)
 
 }
 
@@ -63,10 +63,10 @@ class UsersManager extends Aggregate[UserState, UserEntity] {
         case l@Left(_) => caller ! l
       }
 
-    case FindUserFeed(userId) =>
+    case FindUserFeed(userId, pageParams) =>
       val caller = sender()
       (entityShardRegion ? UserEntity.GetUser(abs(userId))).mapTo[MaybeState[UserState]].map {
-        case Right(user) => caller ! Right(user.feed)
+        case Right(user) => caller ! Right(user.feed.slice(pageParams.skip, pageParams.skip + pageParams.limit))
         case l@Left(_) => caller ! l
       }
   }

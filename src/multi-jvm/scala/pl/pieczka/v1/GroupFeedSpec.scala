@@ -95,8 +95,6 @@ class GroupFeedSpec extends MultiNodeSpec(GroupFeedSpec)
         userRegion ! UserEntity.CreateUser(1, "Bart")
         expectMsg(Right(UserState(1, "Bart")))
 
-        userRegion ! UserEntity.GetUser(2)
-        expectMsg(Right(UserState(2, "Frank")))
       }
 
       enterBarrier("user-created")
@@ -104,15 +102,12 @@ class GroupFeedSpec extends MultiNodeSpec(GroupFeedSpec)
       runOn(node2) {
         val userRegion = ClusterSharding(system).shardRegion("UserEntity")
 
-        userRegion ! UserEntity.CreateUser(2, "Frank")
-        expectMsg(Right(UserState(2, "Frank")))
-
         userRegion ! UserEntity.GetUser(1)
         expectMsg(Right(UserState(1, "Bart")))
 
         val groupRegion = ClusterSharding(system).shardRegion("GroupEntity")
         groupRegion ! GroupEntity.GetGroup(99, 1)
-        expectMsg(Left(GroupEntity.NotMember(99, 1)))
+        expectMsg(Left(GroupEntity.GroupNotFound(99)))
       }
 
       enterBarrier("after-users-created")
@@ -122,13 +117,13 @@ class GroupFeedSpec extends MultiNodeSpec(GroupFeedSpec)
       runOn(node1) {
         val groupRegion = ClusterSharding(system).shardRegion("GroupEntity")
         groupRegion ! CreateGroup(99, 1)
-        expectMsg(Right(GroupState(99, Set(1))))
+        expectMsg(Right(GroupState(99)))
       }
 
       runOn(node2) {
         val groupRegion = ClusterSharding(system).shardRegion("GroupEntity")
         groupRegion ! GroupEntity.GetGroup(99, 1)
-        expectMsg(Right(GroupState(99, Set(1))))
+        expectMsg(Left(GroupEntity.NotMember(99, 1)))
       }
 
       enterBarrier("user-created-group")
@@ -137,11 +132,8 @@ class GroupFeedSpec extends MultiNodeSpec(GroupFeedSpec)
     "allow user to join group" in {
       runOn(node1) {
         val userRegion = ClusterSharding(system).shardRegion("UserEntity")
-        userRegion ! UserEntity.AddGroup(2, 99)
-        expectMsg(Right(UserState(2, "Frank", Set(99))))
-
-        userRegion ! UserEntity.GetUser(2)
-        expectMsg(Right(UserState(2, "Frank", Set(99))))
+        userRegion ! UserEntity.AddGroup(1, 99)
+        expectMsg(Right(UserState(1, "Bart", Set(99))))
       }
 
       enterBarrier("user-joined-group")
@@ -153,7 +145,7 @@ class GroupFeedSpec extends MultiNodeSpec(GroupFeedSpec)
 
         val groupRegion = ClusterSharding(system).shardRegion("GroupEntity")
         groupRegion ! GroupEntity.GetGroup(99, 1)
-        expectMsg(Right(GroupState(99, Set(1, 2))))
+        expectMsg(Right(GroupState(99, Set(1))))
       }
       enterBarrier("after-user-joined-group")
     }
@@ -165,7 +157,7 @@ class GroupFeedSpec extends MultiNodeSpec(GroupFeedSpec)
         expectMsgPF() {
           case Right(GroupState(99, members, feed)) =>
             feed.size shouldBe 1
-            members.size shouldBe 2
+            members.size shouldBe 1
         }
       }
 
@@ -175,7 +167,7 @@ class GroupFeedSpec extends MultiNodeSpec(GroupFeedSpec)
         expectMsgPF() {
           case Right(GroupState(99, members, feed)) =>
             feed.size shouldBe 2
-            members.size shouldBe 2
+            members.size shouldBe 1
         }
       }
       enterBarrier("messages-posted")
@@ -196,15 +188,6 @@ class GroupFeedSpec extends MultiNodeSpec(GroupFeedSpec)
         userRegion ! UserEntity.GetUser(1)
         expectMsgPF() {
           case r@Right(UserState(1, "Bart", _, feed)) =>
-            feed.size shouldBe 2
-        }
-      }
-
-      runOn(node1) {
-        val userRegion = ClusterSharding(system).shardRegion("UserEntity")
-        userRegion ! UserEntity.GetUser(2)
-        expectMsgPF() {
-          case r@Right(UserState(2, "Frank", _, feed)) =>
             feed.size shouldBe 2
         }
       }

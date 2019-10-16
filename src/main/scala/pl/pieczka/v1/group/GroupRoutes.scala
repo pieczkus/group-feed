@@ -5,13 +5,14 @@ import akka.cluster.sharding.ClusterSharding
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
 import pl.pieczka.common.auth.AuthDirectives
-import pl.pieczka.common.{GroupFeedRoutesDefinition, Message, User}
+import pl.pieczka.common.{GroupFeedRoutesDefinition, Message, PagingDirectives, User}
 import pl.pieczka.common.PersistentEntity.MaybeState
 import pl.pieczka.v1.user.{UserEntity, UserState}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class GroupRoutes(groupsManager: ActorRef)(implicit val ec: ExecutionContext, system: ActorSystem) extends GroupFeedRoutesDefinition with GroupJsonProtocol with AuthDirectives {
+class GroupRoutes(groupsManager: ActorRef)(implicit val ec: ExecutionContext, system: ActorSystem) extends GroupFeedRoutesDefinition
+  with GroupJsonProtocol with AuthDirectives with PagingDirectives {
 
   import akka.http.scaladsl.server.Directives._
   import akka.pattern.ask
@@ -25,7 +26,9 @@ class GroupRoutes(groupsManager: ActorRef)(implicit val ec: ExecutionContext, sy
           path(IntNumber) { groupId =>
             serviceAndComplete[GroupState](GroupsManager.FindGroupById(groupId, userId), groupsManager)
           } ~ path(IntNumber / "feed") { groupId =>
-            serviceAndComplete[Seq[Message]](GroupsManager.GetFeed(groupId, userId), groupsManager)
+            pageParams { pageParams =>
+              serviceAndComplete[Seq[Message]](GroupsManager.GetFeed(groupId, userId, pageParams), groupsManager)
+            }
           }
         }
       } ~ post {
